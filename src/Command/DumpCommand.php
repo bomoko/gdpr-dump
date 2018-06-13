@@ -65,7 +65,6 @@ class DumpCommand extends Command {
   }
 
   protected function execute(InputInterface $input, OutputInterface $output) {
-    var_dump($this->getDefaults($input->getOption('defaults-file')));
     $dumpSettings =
       $this->getOptOptions($input->getOption('opt'))
       + $this->getDefaults($input->getOption('defaults-file'))
@@ -108,9 +107,13 @@ class DumpCommand extends Command {
       }
     }
 
-    return array_filter($settings, function ($key) {
-      return in_array($key, ['client', 'mysqldump']);
-    }, ARRAY_FILTER_USE_KEY);
+    return array_reduce(
+        array_filter($settings, function ($key) { //Filter out anything that doesn't have the right key
+          return in_array($key, ['client', 'mysqldump']);
+        }, ARRAY_FILTER_USE_KEY),
+        function($carry, $item) {
+          return array_merge($carry, $item);
+        }, []);
   }
 
   protected function getDsn(array $dumpSettings) {
