@@ -54,7 +54,7 @@ class DumpCommand extends Command {
       ->addOption('skip-dump-date', NULL, InputOption::VALUE_NONE, 'Skip dump date to better compare dumps.')
       ->addOption('skip-definer', NULL, InputOption::VALUE_NONE, 'Omit DEFINER and SQL SECURITY clauses from the CREATE statements for views and stored programs.')
       ->addOption('where', NULL, InputOption::VALUE_OPTIONAL, 'Dump only rows selected by given WHERE condition.')
-      ->addOption('gdpr-expressions', NULL, InputOption::VALUE_OPTIONAL, 'A json of gdpr sql-expressions keyed by table and column.')
+      ->addOption('gdpr-replacements', NULL, InputOption::VALUE_OPTIONAL, 'A json of replacement types keyed by table and column.')
       ->addOption('debug-sql', NULL, InputOption::VALUE_NONE, 'Add a comment with the dump sql.')
       // This seems NOT to work as documented.
       //->addOption('databases', NULL, InputOption::VALUE_OPTIONAL|InputOption::VALUE_IS_ARRAY, 'Dump several databases. Normally, mysqldump treats the first name argument on the command line as a database name and following names as table names. With this option, it treats all name arguments as database names.')
@@ -71,16 +71,17 @@ class DumpCommand extends Command {
       + array_filter($input->getArguments())
       + array_filter($input->getOptions())
       + array_fill_keys(['user', 'password', 'host', 'port', 'socket', 'db-name', 'db-type'], NULL);
+
     $user = $dumpSettings['user'];
     $password = $dumpSettings['password'];
     $dsn = $this->getDsn($dumpSettings);
 
     $dumpSettings['exclude-tables'] = $this->getExcludedTables($dumpSettings);
 
-    if (!empty($dumpSettings['gdpr-expressions'])) {
-      $dumpSettings['gdpr-expressions'] = json_decode($dumpSettings['gdpr-expressions'], TRUE);
+    if (!empty($dumpSettings['gdpr-replacements'])) {
+      $dumpSettings['gdpr-replacements'] = json_decode($dumpSettings['gdpr-replacements'], TRUE);
       if (json_last_error()) {
-        throw new \UnexpectedValueException(sprintf('Invalid gdpr-expressions json (%s): %s', json_last_error_msg(), $dumpSettings['gdpr-expressions']));
+        throw new \UnexpectedValueException(sprintf('Invalid gdpr-replacements json (%s): %s', json_last_error_msg(), $dumpSettings['gdpr-replacements']));
       }
     }
     $dumpSettings = array_intersect_key($dumpSettings, $this->getDumpSettingsDefault());
@@ -200,7 +201,7 @@ class DumpCommand extends Command {
       /* deprecated */
       'disable-foreign-keys-check' => TRUE
     ) + array(
-        'gdpr-expressions' => NULL,
+        'gdpr-replacements' => NULL,
         'debug-sql' => FALSE,
     );
   }
