@@ -100,6 +100,9 @@ class DumpCommand extends Command {
       $defaultsFiles[] = "$homeDir/.my.cnf";
       $defaultsFiles[] = "$homeDir/.mylogin.cnf";
     }
+
+    $defaultsFiles[] = getcwd() . '/.gdpr';
+
     $settings = [];
     foreach ($defaultsFiles as $defaultsFile) {
       $toMerge = MysqlCnfParser::parse($defaultsFile);
