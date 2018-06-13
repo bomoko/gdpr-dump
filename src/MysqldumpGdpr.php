@@ -23,37 +23,15 @@ class MysqldumpGdpr extends Mysqldump
       array $dumpSettings = [],
       array $pdoSettings = []
     ) {
-        if (array_key_exists('gdpr-expressions', $dumpSettings)) {
-            $this->gdprExpressions = $dumpSettings['gdpr-expressions'];
-            unset($dumpSettings['gdpr-expressions']);
+        if (array_key_exists('gdpr-replacements', $dumpSettings)) {
+            $this->gdprExpressions = $dumpSettings['gdpr-replacements'];
+            unset($dumpSettings['gdpr-replacements']);
         }
         if (array_key_exists('debug-sql', $dumpSettings)) {
             $this->debugSql = $dumpSettings['debug-sql'];
             unset($dumpSettings['debug-sql']);
         }
         parent::__construct($dsn, $user, $pass, $dumpSettings, $pdoSettings);
-    }
-
-    public function getColumnStmt($tableName)
-    {
-        $columnStmt = parent::getColumnStmt($tableName);
-        $columnTypes = $this->tableColumnTypes()[$tableName];
-        foreach (array_keys($columnTypes) as $i => $columnName) {
-            $expression = $this->gdprExpressions[$tableName][$columnName];
-            if (!empty($expression)) {
-                $transformer = ColumnTransformer::create($tableName,
-                  $columnName,
-                  $expression);
-                if ($transformer instanceof ColumnTransformSelectStatement) {
-                    $columnStmt[$i] = $transformer->getValue() . " as $columnName";
-                }
-            }
-        }
-        if ($this->debugSql) {
-            print "/* SELECT " . implode(",",
-                $columnStmt) . " FROM `$tableName` */\n\n";
-        }
-        return $columnStmt;
     }
 
     /**

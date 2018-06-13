@@ -1,56 +1,56 @@
 # GDPR Dump
 
-A drop-in replacement for mysqldump that optionally sanitizes DB fields for better GDPR conformity.
+Mysqldump lies at the heart of many of our daily data-centric tasks, as such, it’s an obvious place to do address data-sanitization (for, say, GDPR requirements).
+This project aims to be a pure PHP drop-in replacement for mysqldump that tries to do that for you.
 
-It is based on the [ifsnop/mysqldump\-php](https://github.com/ifsnop/mysqldump-php) library, 
-and can in principle dump any database that PDO supports. 
+This project is forked from the proof-of-concept at [https://github.com/machbarmacher/gdpr-dump](https://github.com/machbarmacher/gdpr-dump),
+but taken in a slightly different direction.
+It is also built on top of [ifsnop/mysqldump\-php](https://github.com/ifsnop/mysqldump-php) which is a mysqldump compatible library.
 
-## How to use
+## Usage 
+
+Presently, this uses [Faker](https://packagist.org/packages/fzaninotto/faker) for the column sanitization.
+
+Presently, the tool searches for the "gdpr-replacements" option, either passed as a command line argument, or as part of a [MySql options file](https://dev.mysql.com/doc/refman/8.0/en/option-files.html).
+
+The "gdpr-replacements" option expects a JSON string with the following format
 
 ```
-$ ../vendor/bin/mysqldump drupal --host=mariadb --user=drupal --password=xxxxxxxx users_field_data --gdpr-expressions='{"users_field_data":{"name":"uid","mail":"uid","pass":"\"\""}}' --debug-sql
-...
+{"tableName" : {"columnName1": {"formatter": "Faker Formatter", ...}, {"columnName2": {"formatter": "Faker Formatter"}, ...}, ...}
+
+```
+
+### MySqlOptions file
+
+If appearing in a MySql config file, you'll have it appear under the `[mysqldump]` section.
+
+So, for example, you might have `/etc/my.cnf` with the following content
+
+```
+[mysqldump]
+gdpr-replacements='{"fakertest":{"name": {"formatter":"name"}, "telephone": {"formatter":"phoneNumber"}}}'
+
+```
+
+### Command line argument
+
+You're also able to pass the replacements as a command line argument.
+
+```
+>./mysqldump -uuser -p**** --gdpr-replacements='{"fakertest":{"name": {"formatter":"name"}, "telephone": {"formatter":"phoneNumber"}}}' --host=localhost testmysqldump;
+
+... Will yeild ...
+
 --
--- Dumping data for table `users_field_data`
+-- Dumping data for table `fakertest`
 --
 
-/* SELECT `uid`,`langcode`,`preferred_langcode`,`preferred_admin_langcode`,uid as name,"" as pass,uid as mail,`timezone`,`status`,`created`,`changed`,`access`,`login`,uid as init,`default_langcode` FROM `users_field_data` */
-
-INSERT INTO `users_field_data` VALUES (0,'en','en',NULL,'0','','0','',0,1523397207,1523397207,0,0,'0',1);
-INSERT INTO `users_field_data` VALUES (1,'en','en',NULL,'1','','1','UTC',1,1523397207,1523397207,0,0,'1',1);
-```
-
-The fields to obfuscate are passed via a `--gdpr-expressions` parameter.
-Note that we use `uid` expression to satisfy unique keys.
-
-The same without obfuscation:
+LOCK TABLES `fakertest` WRITE;
+/*!40000 ALTER TABLE `fakertest` DISABLE KEYS */;
+SET autocommit=0;
+INSERT INTO `fakertest` VALUES (1,'Prof. Omari Kuphal','1-315-778-7545 x0547'),(2,'Ms. Aliza Powlowski Jr.','991.350.5517 x26999');
+/*!40000 ALTER TABLE `fakertest` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
 
 ```
-$ ../vendor/bin/mysqldump drupal --host=mariadb --user=drupal --password=xxxxxxxx users_field_data --debug-sql
-...
---
--- Dumping data for table `users_field_data`
---
-
-/* SELECT `uid`,`langcode`,`preferred_langcode`,`preferred_admin_langcode`,`name`,`pass`,`mail`,`timezone`,`status`,`created`,`changed`,`access`,`login`,`init`,`default_langcode` FROM `users_field_data` */
-
-INSERT INTO `users_field_data` VALUES (0,'en','en',NULL,'',NULL,NULL,'',0,1523397207,1523397207,0,0,NULL,1);
-INSERT INTO `users_field_data` VALUES (1,'en','en',NULL,'admin','$S$Eb6kZl.9OFjoa69Z05pzUhaZJ6vpKaGZVpnjAxxLJ7ip0zOwanEV','admin@example.com','UTC',1,1523397207,1523397207,0,0,'admin@example.com',1);
-```
-## Use with drush
-
-As this mimicks mysqldump, it can be use with drush, backup_migrate and any tool that uses mysqldump.
-Drush example:
-
-```
-$ export PATH=/var/www/html/vendor/bin:$PATH
-$ which mysqldump
-/var/www/html/vendor/bin/mysqldump
-$ drush sql-dump --tables-list=users_field_data --extra-dump=$'--gdpr-expressions=\'{"users_field_data":{"name":"uid","mail":"uid","init":"uid","pass":"\\"\\""}}\' --debug-sql'
-```
-
-## Status and further development
-
-Currently this is a proof of concept to spark a community process.
-Especially the `--gdpr-expressions` option is neither handy to write for humans, nor does it scale well.
-Here we might need better options.

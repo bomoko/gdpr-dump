@@ -13,6 +13,14 @@
     {
       "name": "Axel Rutz",
       "email": "axel.rutz@machbarmacher.net"
+    },
+    {
+      "name": "Blaize Kaye",
+      "email": "blaize.kaye@amazee.com"
+    },
+    {
+      "name": "Fran García-Linares",
+      "email": "fran.garcia@amazee.com"
     }
   ],
   "bin": [
@@ -21,13 +29,6 @@
   "autoload": {
     "psr-4": {
       "machbarmacher\\GdprDump\\": "src/"
-    }
-  },
-  "extra": {
-    "patches": {
-      "ifsnop/mysqldump-php": {
-        "Add getter": "https://patch-diff.githubusercontent.com/raw/ifsnop/mysqldump-php/pull/137.patch"
-      }
     }
   },
   "minimum-stability": "dev",
