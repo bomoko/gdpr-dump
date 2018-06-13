@@ -3,13 +3,13 @@
 namespace machbarmacher\GdprDump\Command;
 
 use Ifsnop\Mysqldump\Mysqldump;
-use machbarmacher\GdprDump\ConfigParser;
 use machbarmacher\GdprDump\MysqldumpGdpr;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use bomoko\MysqlCnfParser\MysqlCnfParser;
 
 class DumpCommand extends Command {
   protected function configure()
@@ -99,14 +99,21 @@ class DumpCommand extends Command {
       $defaultsFiles[] = "$homeDir/.my.cnf";
       $defaultsFiles[] = "$homeDir/.mylogin.cnf";
     }
-
-    $config = new ConfigParser();
+    $settings = [];
     foreach ($defaultsFiles as $defaultsFile) {
-      if (is_readable($defaultsFile)) {
-        $config->addFile($defaultsFile);
+      $toMerge = MysqlCnfParser::parse($defaultsFile);
+      if(is_array($toMerge)) {
+        $settings = array_merge_recursive($settings, $toMerge);
       }
     }
-    return $config->getFiltered(['client', 'mysqldump']);
+
+    return array_reduce(
+        array_filter($settings, function ($key) { //Filter out anything that doesn't have the right key
+          return in_array($key, ['client', 'mysqldump']);
+        }, ARRAY_FILTER_USE_KEY),
+        function($carry, $item) {
+          return array_merge($carry, $item);
+        }, []);
   }
 
   protected function getDsn(array $dumpSettings) {
